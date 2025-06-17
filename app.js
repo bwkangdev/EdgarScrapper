@@ -2,6 +2,10 @@ const fileSystemInstance = require("fs");
 const httpsInstance = require("https");
 const path = require("path");
 const readline = require("readline");
+const express = require("express");
+
+const app = express();
+app.use(express.json());
 
 const reqOptions = {
     headers: {
@@ -10,6 +14,19 @@ const reqOptions = {
     },
 };
 
+const searchPath = path.join(path.resolve(__dirname), "search.html");
+app.get("/search", (req, res) => {
+    res.sendFile(searchPath);
+});
+
+app.post("/searchCorpName", (req, res) => {
+    const { keyword } = req.body;
+    const corpArray = getCorpInfoByCorpName(keyword);
+    return res.status(200).json({
+        result: true,
+        data: corpArray,
+    });
+});
 /**
  * 입력한 corpName을 기준으로 company_tickers.json에 있는 기업 목록에서 해당 이름이 포함된 기업 정보를 모두 검색해 출력
  *
@@ -17,36 +34,22 @@ const reqOptions = {
  *
  * Ticker와 CIK를 얻기 위해 사용
  */
-const getCorpInfoByCorpName = () => {
+const getCorpInfoByCorpName = (keyword) => {
     const filePath = path.join(path.resolve(__dirname), "company_tickers.json");
     const data = JSON.parse(fileSystemInstance.readFileSync(filePath, "utf8"));
     const companies = Object.values(data);
-    const readLineInstance = readline.createInterface({
-        input: process.stdin,
-        output: process.stdout,
-    });
 
-    readLineInstance.question("corp name input: ", (input) => {
-        const keyword = input.toLowerCase();
+    const lowerKeyword = keyword.toLowerCase();
 
-        const results = companies.filter((company) =>
-            company.title.toLowerCase().includes(keyword)
-        );
+    const results = companies.filter((company) =>
+        company.title.toLowerCase().includes(lowerKeyword)
+    );
 
-        if (results.length > 0) {
-            console.log(`\n 총 ${results.length}건 검색됨:\n`);
-            results.forEach((company, index) => {
-                console.log(`[${index + 1}]`);
-                console.log(`기업명 : ${company.title}`);
-                console.log(`Ticker  : ${company.ticker}`);
-                console.log(`CIK     : ${company.cik_str}\n`);
-            });
-        } else {
-            console.log("\n 해당 기업명을 찾을 수 없습니다.");
-        }
-
-        readLineInstance.close();
-    });
+    return results.map((company) => ({
+        title: company.title,
+        ticker: company.ticker,
+        cik: company.cik_str.toString().padStart(10, "0"),
+    }));
 };
 
 const downloadCorpDetail = (cik) => {
@@ -134,4 +137,6 @@ const downloadDocument = async (cik, index) => {
     }
 };
 
-downloadDocument(320193, 2);
+// downloadDocument(320193, 2);
+
+app.listen(3000);

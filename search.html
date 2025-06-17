@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="ko">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Document</title>
+        <link
+            href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css"
+            rel="stylesheet"
+            integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC"
+            crossorigin="anonymous"
+        />
+    </head>
+    <body>
+        <div
+            class="d-flex flex-column justify-content-center align-items-center vh-100"
+        >
+            <div class="input-group mb-3 w-50">
+                <input
+                    type="text"
+                    class="form-control"
+                    placeholder="corp name"
+                    id="corpname-input"
+                />
+                <button
+                    class="btn btn-outline-secondary"
+                    type="button"
+                    id="button-search"
+                >
+                    search
+                </button>
+            </div>
+
+            <script
+                src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"
+                integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM"
+                crossorigin="anonymous"
+            ></script>
+            <script>
+                document.addEventListener("DOMContentLoaded", () => {
+                    const corpNameInput =
+                        document.getElementById("corpname-input");
+                    const searchBtn = document.getElementById("button-search");
+
+                    const searchCorpName = async () => {
+                        try {
+                            const inputValue = corpNameInput.value.trim();
+                            const searchCorpResult = await fetch(
+                                "./searchCorpName",
+                                {
+                                    method: "POST",
+                                    headers: {
+                                        "Content-Type": "application/json",
+                                    },
+                                    body: JSON.stringify({
+                                        keyword: inputValue,
+                                    }),
+                                }
+                            );
+                            const searchCorpResultParsed =
+                                await searchCorpResult.json();
+                            const tableBody =
+                                document.getElementById("result-table-body");
+                            const resultContainer =
+                                document.getElementById("result-container");
+
+                            tableBody.innerHTML = ""; // 기존 내용 비우기
+
+                            searchCorpResultParsed.data.forEach(
+                                (company, index) => {
+                                    const row = document.createElement("tr");
+                                    row.innerHTML = `
+        <td>${index + 1}</td>
+        <td>${company.title}</td>
+        <td>${company.ticker}</td>
+        <td>${company.cik}</td>
+    `;
+                                    tableBody.appendChild(row);
+                                }
+                            );
+
+                            resultContainer.style.display = "block"; // 결과 보이기
+                        } catch (error) {
+                            console.error(error);
+                        }
+                    };
+                    searchBtn.addEventListener("click", searchCorpName);
+                });
+            </script>
+            <div
+                class="container mt-5"
+                id="result-container"
+                style="display: none"
+            >
+                <table class="table table-bordered">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>corp name</th>
+                            <th>Ticker</th>
+                            <th>CIK</th>
+                        </tr>
+                    </thead>
+                    <tbody id="result-table-body"></tbody>
+                </table>
+            </div>
+        </div>
+    </body>
+</html>
