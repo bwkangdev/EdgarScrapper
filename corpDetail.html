@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="ko">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Document</title>
+    </head>
+    <body>
+        <pre id="data-container"></pre>
+        <script>
+            const urlParams = new URLSearchParams(window.location.search);
+            const cik = urlParams.get("cik");
+            document.addEventListener("DOMContentLoaded", async () => {
+                const result = await fetch("./downloadOrReturnCorpJson", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({ cik: cik }),
+                });
+                const resultParsed = await result.json();
+                const dataContainer = document.getElementById("data-container");
+                dataContainer.innerHTML = JSON.stringify(
+                    resultParsed.data,
+                    null,
+                    2
+                );
+            });
+        </script>
+    </body>
+</html>
