@@ -213,9 +213,12 @@ const downloadCorpDetail = (cik) => {
 const downloadDocument = async (cik, index) => {
     const wrappedCik = cik.toString().padStart(10, "0");
 
+    const suffixDir = wrappedCik.slice(-2);
+
     const filePath = path.join(
         path.resolve(__dirname),
         "corpjson",
+        suffixDir,
         `${wrappedCik}.json`
     );
 
@@ -229,6 +232,7 @@ const downloadDocument = async (cik, index) => {
 
     const fileDest = path.join(
         path.resolve(__dirname),
+        "data",
         wrappedCik,
         accessionNo,
         documentNo
@@ -265,6 +269,6 @@ const downloadDocument = async (cik, index) => {
     }
 };
 
-// downloadDocument(320193, 2);
+downloadDocument(320193, 2);
 
 app.listen(3000);
