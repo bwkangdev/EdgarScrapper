@@ -269,6 +269,6 @@ const downloadDocument = async (cik, index) => {
     }
 };
 
-downloadDocument(320193, 2);
-
-app.listen(3000);
+app.listen(59247, () => {
+    console.log("Server running on port 59247");
+});

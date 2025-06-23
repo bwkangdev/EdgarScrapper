@@ -20,12 +20,12 @@
                     type="text"
                     class="form-control"
                     placeholder="corp name"
-                    id="corpname-input"
+                    id="edgarscrapper-searchcorp-corpname-input"
                 />
                 <button
                     class="btn btn-outline-secondary"
                     type="button"
-                    id="button-search"
+                    id="edgarscrapper-searchcorp-button-search"
                 >
                     search
                 </button>
@@ -38,11 +38,15 @@
             ></script>
             <script>
                 document.addEventListener("DOMContentLoaded", () => {
-                    const corpNameInput =
-                        document.getElementById("corpname-input");
-                    const searchBtn = document.getElementById("button-search");
-                    const tableBody =
-                        document.getElementById("result-table-body");
+                    const corpNameInput = document.getElementById(
+                        "edgarscrapper-searchcorp-corpname-input"
+                    );
+                    const searchBtn = document.getElementById(
+                        "edgarscrapper-searchcorp-button-search"
+                    );
+                    const tableBody = document.getElementById(
+                        "edgarscrapper-searchcorp-result-table-body"
+                    );
 
                     const searchCorpName = async () => {
                         try {
@@ -62,8 +66,9 @@
                             const searchCorpResultParsed =
                                 await searchCorpResult.json();
 
-                            const resultContainer =
-                                document.getElementById("result-container");
+                            const resultContainer = document.getElementById(
+                                "edgarscrapper-searchcorp-result-container"
+                            );
 
                             tableBody.innerHTML = ""; // 기존 내용 비우기
 
@@ -87,6 +92,11 @@
                         }
                     };
                     searchBtn.addEventListener("click", searchCorpName);
+                    corpNameInput.addEventListener("keydown", async (event) => {
+                        if (event.key === "Enter") {
+                            await searchCorpName();
+                        }
+                    });
                     tableBody.addEventListener("click", (event) => {
                         const td = event.target.closest("[data-cik]");
                         if (!td) {
@@ -99,7 +109,7 @@
             </script>
             <div
                 class="container mt-5"
-                id="result-container"
+                id="edgarscrapper-searchcorp-result-container"
                 style="display: none"
             >
                 <table class="table table-bordered">
@@ -110,7 +120,9 @@
                             <th>CIK</th>
                         </tr>
                     </thead>
-                    <tbody id="result-table-body"></tbody>
+                    <tbody
+                        id="edgarscrapper-searchcorp-result-table-body"
+                    ></tbody>
                 </table>
             </div>
         </div>
