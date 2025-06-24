@@ -15,7 +15,12 @@
         <div
             class="d-flex flex-column justify-content-center align-items-center min-vh-100"
         >
+            <!--  -->
             <div class="input-group mb-3 w-50">
+                <select id="edgarscrapper-searchcorp-select">
+                    <option selected value="corp name">corp name</option>
+                    <option value="CIK">CIK</option>
+                </select>
                 <input
                     type="text"
                     class="form-control"
@@ -48,21 +53,56 @@
                         "edgarscrapper-searchcorp-result-table-body"
                     );
 
+                    const paramSelector = document.getElementById(
+                        "edgarscrapper-searchcorp-select"
+                    );
+                    let selectedParam = paramSelector.value;
+
+                    //검색기준 변경
+                    paramSelector.addEventListener("change", () => {
+                        selectedParam = paramSelector.value;
+                        corpNameInput.placeholder = selectedParam;
+                    });
+
+                    //검색 시행 및 결과 렌더링
                     const searchCorpName = async () => {
                         try {
                             const inputValue = corpNameInput.value.trim();
-                            const searchCorpResult = await fetch(
-                                "./searchFullCorpName",
-                                {
-                                    method: "POST",
-                                    headers: {
-                                        "Content-Type": "application/json",
-                                    },
-                                    body: JSON.stringify({
-                                        keyword: inputValue,
-                                    }),
-                                }
-                            );
+                            let searchCorpResult;
+                            switch (selectedParam) {
+                                case "corp name":
+                                    searchCorpResult = await fetch(
+                                        "./searchFullCorpName",
+                                        {
+                                            method: "POST",
+                                            headers: {
+                                                "Content-Type":
+                                                    "application/json",
+                                            },
+                                            body: JSON.stringify({
+                                                keyword: inputValue,
+                                            }),
+                                        }
+                                    );
+                                    break;
+                                case "CIK":
+                                    searchCorpResult = await fetch(
+                                        "./searchFullCorpCik",
+                                        {
+                                            method: "POST",
+                                            headers: {
+                                                "Content-Type":
+                                                    "application/json",
+                                            },
+                                            body: JSON.stringify({
+                                                cik: inputValue,
+                                            }),
+                                        }
+                                    );
+                                    break;
+                                default:
+                                    break;
+                            }
                             const searchCorpResultParsed =
                                 await searchCorpResult.json();
 
@@ -107,6 +147,7 @@
                     });
                 });
             </script>
+            <script></script>
             <div
                 class="container mt-5"
                 id="edgarscrapper-searchcorp-result-container"

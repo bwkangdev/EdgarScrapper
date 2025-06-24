@@ -63,6 +63,15 @@ app.post("/searchFullCorpName", (req, res) => {
     });
 });
 
+app.post("/searchFullCorpCik", (req, res) => {
+    const { cik } = req.body;
+    const corpArray = getCorpInfoByCikFromTxt(cik);
+    return res.status(200).json({
+        result: true,
+        data: corpArray,
+    });
+});
+
 app.post("/downloadOrReturnCorpJson", async (req, res) => {
     const { cik } = req.body;
 
@@ -162,6 +171,52 @@ const getCorpInfoByCorpNameFromTxt = (keyword) => {
             results.push({
                 title: name,
                 cik: cikRaw.padStart(10, "0"),
+            });
+        }
+    }
+
+    return results;
+};
+
+/**
+ * 입력한 cik를 기준으로 cik-lookup-data.txt에 있는 기업 목록에서 해당 cik과 일치하는 기업 정보를 검색해 출력
+ *
+ * 추후 DB에 company_tickers.json 데이터를 저장하고, cik = ? 형태의 정확한 검색으로 사용 가능
+ *
+ * 기업명을 얻기 위해 사용
+ */
+const getCorpInfoByCikFromTxt = (cik) => {
+    const keyword = String(cik).trim();
+
+    //유효성 검사
+    const numericValue = Number(keyword);
+    if (isNaN(numericValue) || numericValue < 1000) {
+        return [];
+    }
+
+    const filePath = path.join(__dirname, "cik-lookup-data.txt");
+    const lines = fileSystemInstance
+        .readFileSync(filePath, "utf8")
+        .split("\n")
+        .filter(Boolean);
+
+    const results = [];
+
+    for (const line of lines) {
+        const parts = line.trim().split(":").filter(Boolean);
+        if (parts.length < 2) continue;
+
+        const name = parts.slice(0, -1).join(":").trim();
+        const cikRaw = parts[parts.length - 1].trim();
+
+        if (!/^\d+$/.test(cikRaw)) continue;
+
+        const paddedCik = cikRaw.padStart(10, "0");
+
+        if (paddedCik.includes(keyword)) {
+            results.push({
+                title: name,
+                cik: paddedCik,
             });
         }
     }
