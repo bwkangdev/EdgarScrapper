@@ -349,19 +349,20 @@ const normalizeCorpname = (corpName) => {
     if (!corpName) return "";
 
     const suffixes = [
-        "inc.",
+        "inc\\.",
         "inc",
         "incorporated",
         "corp",
         "corporation",
         "llc",
-        "l.l.c.",
+        "l\\.l\\.c\\.",
         "ltd",
         "limited",
-        "co.",
+        "co\\.",
         "co",
         "company",
         "lp",
+        "l\\.p\\.",
         "llp",
         "plc",
         "liability",
@@ -371,13 +372,13 @@ const normalizeCorpname = (corpName) => {
 
     // 접미사 제거
     suffixes.forEach((suffix) => {
-        const regex = new RegExp(`\\b${suffix}\\b`, "gi");
+        const regex = new RegExp(`(?:\\s+|^)${suffix}(?=\\s+|$)`, "gi");
         result = result.replace(regex, "");
     });
 
     // 공백 정리
     result = result.replace(/[.,]+/g, " ").replace(/\s+/g, " ").trim();
-
+    console.log(result);
     return result;
 };
 
@@ -481,6 +482,9 @@ const downloadDocument = async (cik, index) => {
     }
 };
 
+// (async () => {
+//     const result = await getDataFromNYGov("1565 NY Funding L.P.");
+// })();
 app.listen(59247, () => {
     console.log("Server running on port 59247");
 });
