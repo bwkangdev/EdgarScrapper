@@ -302,9 +302,6 @@ const getDataFromNYGov = async (corpName) => {
                 bestMatchedOne = eachCorp;
             }
         }
-        console.log(
-            `corpName from edgar: ${corpName}\ncorpName from NY gov: ${bestMatchedOne.entityName}\nmatchRate: ${highestScore}`
-        );
         result.matchRate = highestScore;
         if (!bestMatchedOne) {
             result.errorMessage = "no match found";

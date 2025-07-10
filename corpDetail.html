@@ -12,14 +12,14 @@
         />
     </head>
     <body>
-        <div class="col-10 mx-auto d-flex justify-content-center">
+        <div class="flex-column col-10 mx-auto d-flex justify-content-center">
             <table
                 id="corpTable"
                 class="table table-bordered table-striped text-center align-middle"
             >
                 <thead>
                     <tr>
-                        <th colspan="2">기업 정보</th>
+                        <th colspan="2">기업 정보(edgar 제공)</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -73,6 +73,16 @@
                     </tr>
                 </tbody>
             </table>
+            <table
+                id="corpTable2"
+                class="table table-bordered table-striped text-center align-middle"
+            >
+                <thead>
+                    <tr>
+                        <th colspan="2">기업 정보(주정부 제공)</th>
+                    </tr>
+                </thead>
+            </table>
         </div>
         <div class="col-10 mx-auto d-flex justify-content-center">
             <table
@@ -114,14 +124,22 @@
                     body: JSON.stringify({ cik: cik }),
                 });
                 const resultParsed = await result.json();
-                // const dataContainer = document.getElementById("data-container");
-                // dataContainer.innerHTML = JSON.stringify(
-                //     resultParsed.data,
-                //     null,
-                //     2
-                // );
                 fillCorpTable(resultParsed.data);
                 fillDocumentTable(resultParsed.data);
+
+                const StateDataResult = await fetch("./getStateData", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                        corpName: resultParsed.data.name,
+                        stateCode: resultParsed.data.stateOfIncorporation,
+                    }),
+                });
+
+                const stateDataResultParsed = await StateDataResult.json();
+                fillStateDataTable(stateDataResultParsed);
             });
 
             const fillCorpTable = (data) => {
@@ -190,6 +208,66 @@
                 document.getElementById(
                     "edgarscrapper-corpinfo-corpFormerNames"
                 ).innerHTML = formerNames;
+            };
+
+            const fillStateDataTable = (data) => {
+                const table = document.getElementById("corpTable2");
+                let tbody = table.querySelector("tbody");
+                if (!tbody) {
+                    tbody = document.createElement("tbody");
+                    table.appendChild(tbody);
+                } else {
+                    tbody.innerHTML = "";
+                }
+
+                if (data.result === false) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="2" class="text-danger fw-bold">
+                                ${data.errorMessage}
+                            </td>
+                        </tr>
+                    `;
+                } else {
+                    const corpInfo = data.corpInfo;
+                    const generalInfo = corpInfo.entityGeneralInfo;
+                    const ceo = corpInfo.ceo;
+
+                    const ceoAddress = ceo?.address;
+                    const ceoAddressStr = ceoAddress
+                        ? [
+                              ceoAddress.streetAddress || "",
+                              ceoAddress.city || "",
+                              ceoAddress.state || "",
+                              ceoAddress.zipCode || "",
+                              ceoAddress.country || "",
+                          ]
+                              .filter((s) => s && s.trim() !== "")
+                              .join(", ")
+                        : "";
+
+                    tbody.innerHTML = `
+                        <tr>
+                            <td>기업 유형</td>
+                            <td>${generalInfo.entityType || "-"}</td>
+                        </tr>
+                        <tr>
+                            <td>기업 상태</td>
+                            <td>${generalInfo.entityStatus || "-"}</td>
+                        </tr>
+                        <tr>
+                            <td>CEO</td>
+                            <td>
+                                ${ceo?.name || "-"}
+                                ${
+                                    ceoAddressStr
+                                        ? `<br><small>${ceoAddressStr}</small>`
+                                        : ""
+                                }
+                            </td>
+                        </tr>
+                    `;
+                }
             };
 
             const fillDocumentTable = (data) => {
