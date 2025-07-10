@@ -1,11 +1,15 @@
 const fileSystemInstance = require("fs");
 const httpsInstance = require("https");
 const path = require("path");
-const readline = require("readline");
+const stringSimilarity = require("string-similarity");
 const express = require("express");
 
 const app = express();
 app.use(express.json());
+
+//정적파일 라우팅
+const publicPath = path.join(path.resolve(__dirname), "public");
+app.use("/res", express.static(publicPath));
 
 //edgar에 보내는 requset option
 const reqOptions = {
@@ -112,6 +116,17 @@ app.post("/downloadOrReturnCorpJson", async (req, res) => {
             error: err.message || "Download or read failed",
         });
     }
+});
+
+app.post("/getStateData", async (req, res) => {
+    const { corpName, stateCode } = req.body;
+    let result;
+    if (stateCode === "NY") {
+        result = await getDataFromNYGov(corpName);
+    } else {
+        result = { result: false, errorMessage: "unsupported state" };
+    }
+    return res.status(200).json(result);
 });
 
 //함수 정의
@@ -222,6 +237,151 @@ const getCorpInfoByCikFromTxt = (cik) => {
     }
 
     return results;
+};
+
+const getDataFromNYGov = async (corpName) => {
+    //반환할 객체
+    let result = { result: false };
+    //접미어 제거
+    const normalizedCorpname = normalizeCorpname(corpName);
+    let corpList;
+
+    try {
+        //접미어 제거된 사업자명으로 검색 실행
+        const corpListResponse = await fetch(
+            "https://apps.dos.ny.gov/PublicInquiryWeb/api/PublicInquiry/GetComplexSearchMatchingEntities",
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    searchValue: normalizedCorpname,
+                    searchByTypeIndicator: "EntityName",
+                    searchExpressionIndicator: "BeginsWith",
+                    entityStatusIndicator: "AllStatuses",
+                    entityTypeIndicator: [
+                        "Corporation",
+                        "LimitedLiabilityCompany",
+                        "LimitedPartnership",
+                        "LimitedLiabilityPartnership",
+                    ],
+                    listPaginationInfo: {
+                        listStartRecord: 1,
+                        listEndRecord: 50,
+                    },
+                }),
+            }
+        );
+        const data = await corpListResponse.json();
+        if (
+            data.requestStatus !== "Success" ||
+            data.resultIndicator === "NoEntityMatchFound"
+        ) {
+            result.errorMessage = "entity not found";
+            return result;
+        }
+        corpList = data.entitySearchResultList;
+    } catch (error) {
+        result.errorMessage = "internal server error requesting corp list";
+        return result;
+    }
+
+    let bestMatchedOne = null;
+    let highestScore = 0;
+
+    try {
+        for (const eachCorp of corpList) {
+            const entityName = eachCorp.entityName;
+            const score = stringSimilarity.compareTwoStrings(
+                corpName.toLowerCase(),
+                entityName.toLowerCase()
+            );
+            if (score >= highestScore) {
+                highestScore = score;
+                bestMatchedOne = eachCorp;
+            }
+        }
+        console.log(
+            `corpName from edgar: ${corpName}\ncorpName from NY gov: ${bestMatchedOne.entityName}\nmatchRate: ${highestScore}`
+        );
+        result.matchRate = highestScore;
+        if (!bestMatchedOne) {
+            result.errorMessage = "no match found";
+            return result;
+        }
+    } catch (error) {
+        result.errorMessage = "internal server error matching corp name";
+        return result;
+    }
+
+    try {
+        const detailResponse = await fetch(
+            "https://apps.dos.ny.gov/PublicInquiryWeb/api/PublicInquiry/GetEntityRecordByID",
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    SearchID: bestMatchedOne.dosID,
+                    EntityName: bestMatchedOne.entityName,
+                    AssumedNameFlag: "false",
+                }),
+            }
+        );
+        const detailData = await detailResponse.json();
+
+        if (
+            detailData.requestStatus !== "Success" ||
+            detailData.resultIndicator !== "EntityMatchFound"
+        ) {
+            result.errorMessage = "can not get detailed data";
+            return result;
+        }
+        result.result = true;
+        result.corpInfo = detailData;
+    } catch (error) {
+        result.errorMessage = "internal server error fetching detailed data";
+        return result;
+    }
+    return result;
+};
+
+const normalizeCorpname = (corpName) => {
+    if (!corpName) return "";
+
+    const suffixes = [
+        "inc.",
+        "inc",
+        "incorporated",
+        "corp",
+        "corporation",
+        "llc",
+        "l.l.c.",
+        "ltd",
+        "limited",
+        "co.",
+        "co",
+        "company",
+        "lp",
+        "llp",
+        "plc",
+        "liability",
+    ];
+
+    let result = corpName.trim().toLowerCase();
+
+    // 접미사 제거
+    suffixes.forEach((suffix) => {
+        const regex = new RegExp(`\\b${suffix}\\b`, "gi");
+        result = result.replace(regex, "");
+    });
+
+    // 공백 정리
+    result = result.replace(/[.,]+/g, " ").replace(/\s+/g, " ").trim();
+
+    return result;
 };
 
 const downloadCorpDetail = (cik) => {
