@@ -2,6 +2,7 @@ const fileSystemInstance = require("fs");
 const httpsInstance = require("https");
 const path = require("path");
 const stringSimilarity = require("string-similarity");
+const { XMLParser } = require("fast-xml-parser");
 const express = require("express");
 
 const app = express();
@@ -78,6 +79,8 @@ app.post("/searchFullCorpCik", (req, res) => {
 
 app.post("/downloadOrReturnCorpJson", async (req, res) => {
     const { cik } = req.body;
+    let corpData = null;
+    let relatedPersons = null;
 
     try {
         const wrappedCik = cik.toString().padStart(10, "0");
@@ -90,26 +93,65 @@ app.post("/downloadOrReturnCorpJson", async (req, res) => {
         );
 
         // 파일 존재 여부 확인
-        if (fileSystemInstance.existsSync(filePath)) {
-            const fileContent = fileSystemInstance.readFileSync(
-                filePath,
-                "utf-8"
+        if (!fileSystemInstance.existsSync(filePath)) {
+            // 파일 없으면 다운로드 시도
+            await downloadCorpDetail(cik);
+        }
+        const fileContent = fileSystemInstance.readFileSync(filePath, "utf-8");
+
+        corpData = JSON.parse(fileContent);
+
+        //임원 정보 추출
+        //임원 정보 확인 대상인 primary_doc.xml 존재 여부 확인
+        const hasPrimaryDocXml =
+            corpData.filings?.recent?.primaryDocument?.some((doc) =>
+                doc.includes("primary_doc.xml")
             );
-            return res
-                .status(200)
-                .json({ result: true, data: JSON.parse(fileContent) });
+        if (hasPrimaryDocXml) {
+            //있다면 url 추출
+            const index = corpData.filings?.recent?.primaryDocument?.findIndex(
+                (doc) =>
+                    typeof doc === "string" && doc.includes("primary_doc.xml")
+            );
+            const fileName = corpData.filings.recent.primaryDocument[index]
+                .split("/")
+                .pop();
+            const docPath = `https://www.sec.gov/Archives/edgar/data/${
+                corpData.cik
+            }/${corpData.filings.recent.accessionNumber[index].replace(
+                /-/g,
+                ""
+            )}/${fileName}`;
+
+            // 데이터 요청
+            const docResult = await fetch(docPath);
+            // const docResultParsed = docResult.json();
+            const xmlText = await docResult.text();
+            const parser = new XMLParser();
+            const jsonObj = parser.parse(xmlText);
+
+            //relatedPersons 추출
+            let relatedPersons =
+                jsonObj.edgarSubmission?.relatedPersonsList
+                    ?.relatedPersonInfo || [];
+
+            if (!Array.isArray(relatedPersons)) {
+                // 배열이 아닌 경우 처리
+                relatedPersons = [relatedPersons];
+            }
+            console.log(relatedPersons);
+
+            //Executive officer의 역할을 가진 사람만 추출
+            const filteredList = relatedPersons.filter((person) => {
+                const relationships =
+                    person.relatedPersonRelationshipList?.relationship || [];
+                return relationships.includes("Executive Officer");
+            });
+            corpData.relatedPersons = filteredList;
+            console.log(filteredList);
         }
 
-        // 파일 없으면 다운로드 시도
-        const downloadedPath = await downloadCorpDetail(cik);
-        const downloadedContent = fileSystemInstance.readFileSync(
-            downloadedPath,
-            "utf-8"
-        );
-
-        return res
-            .status(200)
-            .json({ result: true, data: JSON.parse(downloadedContent) });
+        return res.status(200).json({ result: true, data: corpData });
     } catch (err) {
         return res.status(500).json({
             result: false,

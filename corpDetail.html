@@ -74,6 +74,22 @@
                 </tbody>
             </table>
             <table
+                id="officerTable"
+                class="table table-bordered table-striped text-center align-middle mt-4"
+            >
+                <thead>
+                    <tr>
+                        <th colspan="3">임원 정보</th>
+                    </tr>
+                    <tr>
+                        <th>이름</th>
+                        <th>직함</th>
+                        <th>관계</th>
+                    </tr>
+                </thead>
+                <tbody id="edgarscrapper-corpinfo-officer-table-body"></tbody>
+            </table>
+            <table
                 id="corpTable2"
                 class="table table-bordered table-striped text-center align-middle"
             >
@@ -126,6 +142,7 @@
                 const resultParsed = await result.json();
                 fillCorpTable(resultParsed.data);
                 fillDocumentTable(resultParsed.data);
+                fillOfficerTable(resultParsed.data.relatedPersons);
 
                 const StateDataResult = await fetch("./getStateData", {
                     method: "POST",
@@ -332,6 +349,58 @@
 
                     tableBody.appendChild(row);
                 }
+            };
+
+            const fillOfficerTable = (relatedPersonInfoList) => {
+                const tableBody = document.getElementById(
+                    "edgarscrapper-corpinfo-officer-table-body"
+                );
+
+                if (
+                    !Array.isArray(relatedPersonInfoList) ||
+                    relatedPersonInfoList.length === 0
+                ) {
+                    tableBody.innerHTML = `
+                        <tr>
+                            <td colspan="3" class="text-danger">임원 정보가 없습니다.</td>
+                        </tr>
+                    `;
+                    return;
+                }
+
+                tableBody.innerHTML = "";
+
+                relatedPersonInfoList.forEach((person) => {
+                    const fullName = `${
+                        person.relatedPersonName?.firstName || ""
+                    } ${person.relatedPersonName?.lastName || ""}`.trim();
+                    const title = person.relationshipClarification || "-";
+
+                    const relationshipRaw =
+                        person.relatedPersonRelationshipList?.relationship;
+                    const relationshipList = Array.isArray(relationshipRaw)
+                        ? relationshipRaw
+                        : relationshipRaw
+                        ? [relationshipRaw]
+                        : [];
+                    const relationships = relationshipList.join(", ");
+
+                    const row = document.createElement("tr");
+
+                    const nameTd = document.createElement("td");
+                    nameTd.textContent = fullName;
+                    row.appendChild(nameTd);
+
+                    const titleTd = document.createElement("td");
+                    titleTd.textContent = title;
+                    row.appendChild(titleTd);
+
+                    const relTd = document.createElement("td");
+                    relTd.textContent = relationships;
+                    row.appendChild(relTd);
+
+                    tableBody.appendChild(row);
+                });
             };
         </script>
     </body>

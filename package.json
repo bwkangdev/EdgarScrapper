@@ -11,6 +11,7 @@
   "description": "",
   "dependencies": {
     "express": "^5.1.0",
+    "fast-xml-parser": "^5.2.5",
     "string-similarity": "^4.0.4"
   }
 }
