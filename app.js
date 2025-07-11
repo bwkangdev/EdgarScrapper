@@ -139,7 +139,6 @@ app.post("/downloadOrReturnCorpJson", async (req, res) => {
                 // 배열이 아닌 경우 처리
                 relatedPersons = [relatedPersons];
             }
-            console.log(relatedPersons);
 
             //Executive officer의 역할을 가진 사람만 추출
             const filteredList = relatedPersons.filter((person) => {
@@ -148,7 +147,6 @@ app.post("/downloadOrReturnCorpJson", async (req, res) => {
                 return relationships.includes("Executive Officer");
             });
             corpData.relatedPersons = filteredList;
-            console.log(filteredList);
         }
 
         return res.status(200).json({ result: true, data: corpData });
@@ -399,6 +397,7 @@ const normalizeCorpname = (corpName) => {
         "llc",
         "l\\.l\\.c\\.",
         "ltd",
+        "ltd\\.",
         "limited",
         "co\\.",
         "co",
@@ -408,6 +407,7 @@ const normalizeCorpname = (corpName) => {
         "llp",
         "plc",
         "liability",
+        "gp",
     ];
 
     let result = corpName.trim().toLowerCase();
@@ -420,7 +420,6 @@ const normalizeCorpname = (corpName) => {
 
     // 공백 정리
     result = result.replace(/[.,]+/g, " ").replace(/\s+/g, " ").trim();
-    console.log(result);
     return result;
 };
 
